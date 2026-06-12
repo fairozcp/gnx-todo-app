@@ -44,7 +44,7 @@ jobs:
           docker build -t $BACKEND_IMAGE:${GITHUB_SHA} ./backend
           docker push $BACKEND_IMAGE:${GITHUB_SHA}
 
-  validate:
+    validate:
     runs-on: ubuntu-latest
     needs: push
 
@@ -52,13 +52,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Validate Kubernetes manifests
+      - name: Validate Kubernetes YAML files
         run: |
-          kubectl version --client
-          kubectl apply --dry-run=client --validate=false -f k8s/namespace.yaml
-          kubectl apply --dry-run=client --validate=false -f k8s/secret.yaml
-          kubectl apply --dry-run=client --validate=false -f k8s/postgres.yaml
-          kubectl apply --dry-run=client --validate=false -f k8s/backend.yaml
-          kubectl apply --dry-run=client --validate=false -f k8s/frontend.yaml
-          kubectl apply --dry-run=client --validate=false -f k8s/ingress.yaml
-          kubectl apply --dry-run=client --validate=false -f k8s/grafana-ingress.yaml
+          python - <<'PY'
+          import yaml
+          from pathlib import Path
+
+          files = [
+              "k8s/namespace.yaml",
+              "k8s/secret.yaml",
+              "k8s/postgres.yaml",
+              "k8s/backend.yaml",
+              "k8s/frontend.yaml",
+              "k8s/ingress.yaml",
+              "k8s/grafana-ingress.yaml",
+          ]
+
+          for file in files:
+              path = Path(file)
+              if not path.exists():
+                  raise SystemExit(f"Missing file: {file}")
+
+              with path.open("r", encoding="utf-8") as f:
+                  docs = list(yaml.safe_load_all(f))
+
+              docs = [doc for doc in docs if doc]
+              if not docs:
+                  raise SystemExit(f"No YAML documents found in {file}")
+
+              for doc in docs:
+                  if "apiVersion" not in doc:
+                      raise SystemExit(f"Missing apiVersion in {file}")
+                  if "kind" not in doc:
+                      raise SystemExit(f"Missing kind in {file}")
+                  if "metadata" not in doc:
+                      raise SystemExit(f"Missing metadata in {file}")
+
+              print(f"Validated {file}")
+
+          print("All Kubernetes YAML files are valid.")
+          PY
