@@ -91,3 +91,34 @@ jobs:
 
           print("All Kubernetes YAML files are valid.")
           PY
+  deploy:
+    runs-on: self-hosted
+    needs: validate
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check Kubernetes access
+        shell: powershell
+        run: |
+          kubectl get nodes
+          kubectl get pods -n gnx-app
+
+      - name: Deploy frontend and backend images
+        shell: powershell
+        run: |
+          kubectl set image deployment/gnx-frontend gnx-frontend=${{ env.FRONTEND_IMAGE }}:${{ github.sha }} -n gnx-app
+          kubectl set image deployment/gnx-backend gnx-backend=${{ env.BACKEND_IMAGE }}:${{ github.sha }} -n gnx-app
+
+      - name: Wait for rollout
+        shell: powershell
+        run: |
+          kubectl rollout status deployment/gnx-frontend -n gnx-app
+          kubectl rollout status deployment/gnx-backend -n gnx-app
+
+      - name: Show final Kubernetes status
+        shell: powershell
+        run: |
+          kubectl get pods -n gnx-app
+          kubectl get all -n gnx-app
