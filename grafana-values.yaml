@@ -1,0 +1,9 @@
+grafana:
+  adminPassword: gnxadmin123
+  grafana.ini:
+    server:
+      root_url: http://localhost/grafana/
+      serve_from_sub_path: true
+
+prometheus-node-exporter:
+  enabled: false
