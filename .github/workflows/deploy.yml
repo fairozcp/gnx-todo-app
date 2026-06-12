@@ -44,7 +44,7 @@ jobs:
           docker build -t $BACKEND_IMAGE:${GITHUB_SHA} ./backend
           docker push $BACKEND_IMAGE:${GITHUB_SHA}
 
-    validate:
+  validate:
     runs-on: ubuntu-latest
     needs: push
 
@@ -74,9 +74,8 @@ jobs:
                   raise SystemExit(f"Missing file: {file}")
 
               with path.open("r", encoding="utf-8") as f:
-                  docs = list(yaml.safe_load_all(f))
+                  docs = [doc for doc in yaml.safe_load_all(f) if doc]
 
-              docs = [doc for doc in docs if doc]
               if not docs:
                   raise SystemExit(f"No YAML documents found in {file}")
 
